@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Literal, TypedDict
+from typing import TypedDict
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -12,16 +12,29 @@ from app.schemas import LLMWordList, WordItem, WordResponse
 
 class GraphState(TypedDict):
     word: str
-    type: Literal["synonyms", "antonyms"]
+    synonyms: list[WordItem]
+    antonyms: list[WordItem]
     result: WordResponse | None
 
 
-PROMPT_TEMPLATE = ChatPromptTemplate.from_messages(
+SYNONYM_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
             "Ты — лингвистический помощник. "
-            "Пользователь даёт тебе слово и просит подобрать ровно 10 {type} к нему. "
+            "Пользователь даёт тебе слово, подбери ровно 10 синонимов к нему. "
+            "Верни только список из 10 слов, без пояснений.",
+        ),
+        ("human", "Слово: {word}"),
+    ]
+)
+
+ANTONYM_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "Ты — лингвистический помощник. "
+            "Пользователь даёт тебе слово, подбери ровно 10 антонимов к нему. "
             "Верни только список из 10 слов, без пояснений.",
         ),
         ("human", "Слово: {word}"),
@@ -41,31 +54,43 @@ def _build_llm() -> ChatGoogleGenerativeAI:
     )
 
 
-def generate(state: GraphState) -> GraphState:
+def generate_synonyms(state: GraphState) -> GraphState:
     llm = _build_llm()
-    structured_llm = llm.with_structured_output(LLMWordList)
-    chain = PROMPT_TEMPLATE | structured_llm
+    chain = SYNONYM_PROMPT | llm.with_structured_output(LLMWordList)
+    response: LLMWordList = chain.invoke({"word": state["word"]})
+    items = [WordItem(word=w, type="synonym") for w in response.words]
+    return {"synonyms": items}
 
-    type_label = "синонимов" if state["type"] == "synonyms" else "антонимов"
-    response: LLMWordList = chain.invoke({"word": state["word"], "type": type_label})
 
-    item_type: Literal["synonym", "antonym"] = (
-        "synonym" if state["type"] == "synonyms" else "antonym"
-    )
-    items = [WordItem(word=w, type=item_type) for w in response.words]
+def generate_antonyms(state: GraphState) -> GraphState:
+    llm = _build_llm()
+    chain = ANTONYM_PROMPT | llm.with_structured_output(LLMWordList)
+    response: LLMWordList = chain.invoke({"word": state["word"]})
+    items = [WordItem(word=w, type="antonym") for w in response.words]
+    return {"antonyms": items}
 
+
+def format_result(state: GraphState) -> GraphState:
     return {
-        **state,
-        "result": WordResponse(original_word=state["word"], items=items),
+        "result": WordResponse(
+            original_word=state["word"],
+            synonyms=state["synonyms"],
+            antonyms=state["antonyms"],
+        ),
     }
 
 
 def build_graph():
-    graph_builder = StateGraph(GraphState)
-    graph_builder.add_node("generate", generate)
-    graph_builder.add_edge(START, "generate")
-    graph_builder.add_edge("generate", END)
-    return graph_builder.compile()
+    builder = StateGraph(GraphState)
+    builder.add_node("generate_synonyms", generate_synonyms)
+    builder.add_node("generate_antonyms", generate_antonyms)
+    builder.add_node("format_result", format_result)
+    builder.add_edge(START, "generate_synonyms")
+    builder.add_edge(START, "generate_antonyms")
+    builder.add_edge("generate_synonyms", "format_result")
+    builder.add_edge("generate_antonyms", "format_result")
+    builder.add_edge("format_result", END)
+    return builder.compile()
 
 
 graph = build_graph()
