@@ -8,10 +8,7 @@ from pydantic import BaseModel, Field
 class WordRequest(BaseModel):
     """Запрос от пользователя."""
 
-    word: str = Field(..., description="Слово, для которого нужно найти синонимы или антонимы")
-    type: Literal["synonyms", "antonyms"] = Field(
-        ..., description="Тип запроса: synonyms (синонимы) или antonyms (антонимы)"
-    )
+    word: str = Field(..., description="Слово, для которого нужно найти синонимы и антонимы")
 
 
 class WordItem(BaseModel):
@@ -22,13 +19,14 @@ class WordItem(BaseModel):
 
 
 class WordResponse(BaseModel):
-    """Ответ сервера со списком синонимов/антонимов."""
+    """Ответ сервера со списком синонимов и антонимов."""
 
     original_word: str = Field(..., description="Исходное слово")
-    items: list[WordItem] = Field(..., description="Список из 10 синонимов или антонимов")
+    synonyms: list[WordItem] = Field(..., description="Список из 10 синонимов")
+    antonyms: list[WordItem] = Field(..., description="Список из 10 антонимов")
 
 
 class LLMWordList(BaseModel):
     """Структурированный ответ от LLM — список слов."""
 
-    words: list[str] = Field(..., description="Список из 10 синонимов или антонимов")
+    words: list[str] = Field(..., description="Список из 10 слов")
