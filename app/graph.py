@@ -48,7 +48,7 @@ def _build_llm() -> ChatGoogleGenerativeAI:
         os.environ.setdefault("HTTPS_PROXY", proxy_url)
         os.environ.setdefault("HTTP_PROXY", proxy_url)
     return ChatGoogleGenerativeAI(
-        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite"),
         temperature=0.7,
         transport="rest",
     )
