@@ -3,12 +3,13 @@ from __future__ import annotations
 from typing import Literal
 
 from pydantic import BaseModel, Field
+from datetime import datetime
 
 
 class WordRequest(BaseModel):
     """Запрос от пользователя."""
 
-    word: str = Field(..., description="Слово, для которого нужно найти синонимы и антонимы")
+    word: str = Field(..., description="Слово, для которого нужно найти синонимы и антонимы", min_length=2, max_length=50, pattern= "^[A-Za-zА-Яа-яЁё\-]+$")
 
 
 class WordItem(BaseModel):
@@ -30,3 +31,6 @@ class LLMWordList(BaseModel):
     """Структурированный ответ от LLM — список слов."""
 
     words: list[str] = Field(..., description="Список из 10 слов")
+
+class HistoryItem(WordResponse):
+    timestamp: datetime = Field(..., description="Время")
