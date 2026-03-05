@@ -48,9 +48,13 @@ class WordResponse(SynonymsResponse, AntonymsResponse):
 
 
 class HistoryItem(WordResponse):
+    """Ответ сервера со списком синонимов, антонимов и времени"""
+
     timestamp: datetime = Field(..., description="Время")
 
 
 class StatsResponse(BaseModel):
+    """Ответ сервера со статистикой: слово, количество запросов"""
+
     popular_word: str = Field(..., description="Самое популярное слово")
     count_request: int = Field(..., description="Количество запросов")

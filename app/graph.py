@@ -11,6 +11,14 @@ from app.schemas import LLMWordList, WordItem, WordResponse
 
 
 class GraphState(TypedDict):
+    """
+    Attributes:
+        word: str
+        synonyms: list[WordItem]
+        antonyms: list[WordItem]
+        result: WordResponse | None
+    """
+
     word: str
     synonyms: list[WordItem]
     antonyms: list[WordItem]
